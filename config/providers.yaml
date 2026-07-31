@@ -1,0 +1,16 @@
+providers:
+  bing_rss:
+    enabled: true
+    priority: 10
+  yahoo:
+    enabled: false
+    priority: 20
+  bing_html:
+    enabled: false
+    priority: 30
+  duckduckgo:
+    enabled: false
+    priority: 40
+  mojeek:
+    enabled: false
+    priority: 50

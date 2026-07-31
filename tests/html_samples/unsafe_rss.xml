@@ -1,0 +1,3 @@
+<?xml version="1.0"?>
+<!DOCTYPE rss [<!ENTITY company "unsafe">]>
+<rss><channel><item><title>&company;</title><link>https://example.jp/</link></item></channel></rss>
