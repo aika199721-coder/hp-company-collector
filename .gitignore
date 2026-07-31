@@ -10,6 +10,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
+# Generated release archives are CI artifacts, never Git content.
 dist/
 downloads/
 eggs/
@@ -208,6 +209,19 @@ tempCodeRunnerFile.py
 
 # PyPI configuration file
 .pypirc
+
+# Application runtime artifacts (keep directory placeholders tracked)
+data/*
+!data/.gitkeep
+input/*
+!input/.gitkeep
+!input/search_conditions_sample.csv
+logs/*
+!logs/.gitkeep
+output/*
+!output/.gitkeep
+config/local.yaml
+input/search_conditions.csv
 
 # Marimo
 marimo/_static/
