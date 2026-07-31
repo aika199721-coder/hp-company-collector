@@ -1,0 +1,161 @@
+name: Offline tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        id: setup_python
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest
+      - run: python -m ruff check .
+      - name: Validate PowerShell syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-ChildItem scripts/windows/*.ps1 | ForEach-Object {
+            [void][scriptblock]::Create((Get-Content -Raw -LiteralPath $_.FullName))
+          }
+
+  windows-setup-smoke:
+    name: Windows setup smoke (Python 3.13)
+    needs: python
+    runs-on: windows-latest
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      HPCC_NO_PAUSE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        id: setup_python
+        with:
+          python-version: "3.13"
+          architecture: x64
+      - name: Build release ZIP for smoke test
+        run: python scripts/build_release.py
+      - name: Run setup and validate in Windows path variants
+        shell: pwsh
+        env:
+          HPCC_PYTHON: ${{ steps.setup_python.outputs.python-path }}
+        run: |
+          $zip = Join-Path $PWD 'dist\hp_company_collector_v0.10.0_windows.zip'
+          . (Join-Path $PWD 'scripts\windows\common.ps1')
+          $detected = Find-Python313 -Root $PWD
+          if ($null -eq $detected) { throw 'actions/setup-python Python was not detected' }
+          $expectedPython = & $env:HPCC_PYTHON -c 'import sys; print(sys.executable)'
+          if ($detected.Path -ne "$expectedPython".Trim()) {
+            throw "HPCC_PYTHON did not win: $($detected.Path) != $expectedPython"
+          }
+          $paths = @(
+            (Join-Path $env:RUNNER_TEMP '日本語パス'),
+            (Join-Path $env:RUNNER_TEMP 'space path'),
+            (Join-Path $env:RUNNER_TEMP '括弧 (test)'),
+            (Join-Path $env:RUNNER_TEMP 'OneDrive - Company\配布')
+          )
+          $summary = @(
+            "source_sha=$env:SOURCE_SHA",
+            "setup_python_path=$env:HPCC_PYTHON",
+            "PATH=$env:PATH",
+            "where_python=$(& where.exe python | Out-String)",
+            "get_command_python=$((Get-Command python.exe).Source)"
+          )
+          foreach ($path in $paths) {
+            New-Item -ItemType Directory -Force -Path $path | Out-Null
+            Expand-Archive -LiteralPath $zip -DestinationPath $path -Force
+            $root = Join-Path $path 'hp_company_collector'
+            & (Join-Path $root 'setup.bat') --no-pause
+            $setupCode = $LASTEXITCODE
+            if ($setupCode -ne 0) { throw "setup failed: $path ($setupCode)" }
+            if (-not (Test-Path -LiteralPath (Join-Path $root '.venv\Scripts\python.exe'))) {
+              throw "venv missing: $path"
+            }
+            if (-not (Get-ChildItem -LiteralPath (Join-Path $root 'logs') -Filter 'setup_*.log')) {
+              throw "setup log missing: $path"
+            }
+            & (Join-Path $root 'validate.bat') --no-pause
+            $validateCode = $LASTEXITCODE
+            if ($validateCode -ne 0) { throw "validate failed: $path ($validateCode)" }
+            & (Join-Path $root 'setup.bat') --no-pause
+            $rerunCode = $LASTEXITCODE
+            if ($rerunCode -ne 0) { throw "setup rerun failed: $path ($rerunCode)" }
+            $summary += "path=$path setup=$setupCode validate=$validateCode rerun=$rerunCode"
+          }
+          $summary | Set-Content -Encoding utf8 (Join-Path $PWD 'windows_setup_smoke.txt')
+      - name: Upload setup smoke diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup-smoke-${{ env.SOURCE_SHA }}
+          path: |
+            windows_setup_smoke.txt
+            ${{ runner.temp }}/**/logs/setup_*.log
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-release:
+    name: Build Windows release artifact
+    needs: [python, windows-setup-smoke]
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          architecture: x64
+      - name: Confirm checkout commit and clean source tree
+        run: |
+          echo "Artifact source commit: $(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git status --porcelain)"
+      - name: Build and validate release ZIP
+        run: python scripts/build_release.py
+      - name: Verify canonical setup content and SHA256
+        run: |
+          ZIP=dist/hp_company_collector_v0.10.0_windows.zip
+          SOURCE_BAT_SHA=$(sha256sum setup.bat | cut -d' ' -f1)
+          ZIP_BAT_SHA=$(unzip -p "$ZIP" hp_company_collector/setup.bat | sha256sum | cut -d' ' -f1)
+          SOURCE_PS_SHA=$(sha256sum scripts/windows/setup.ps1 | cut -d' ' -f1)
+          ZIP_PS_SHA=$(unzip -p "$ZIP" hp_company_collector/scripts/windows/setup.ps1 | sha256sum | cut -d' ' -f1)
+          echo "setup.bat source SHA256: $SOURCE_BAT_SHA"
+          echo "setup.bat archive SHA256: $ZIP_BAT_SHA"
+          echo "setup.ps1 source SHA256: $SOURCE_PS_SHA"
+          echo "setup.ps1 archive SHA256: $ZIP_PS_SHA"
+          test "$SOURCE_BAT_SHA" = "$ZIP_BAT_SHA"
+          test "$SOURCE_PS_SHA" = "$ZIP_PS_SHA"
+          unzip -p "$ZIP" hp_company_collector/setup.bat | grep -F "setupfix11.2.2.1-v1"
+          unzip -p "$ZIP" hp_company_collector/scripts/windows/setup.ps1 | grep -F "setupfix11.2.2.1-v1"
+          ! unzip -p "$ZIP" hp_company_collector/setup.bat | grep -i "cmdcmdline"
+          ! unzip -p "$ZIP" hp_company_collector/setup.bat | grep -F '^&'
+      - name: Verify release filename
+        run: test -f dist/hp_company_collector_v0.10.0_windows.zip
+      - name: Confirm build did not modify tracked files
+        run: test -z "$(git status --porcelain)"
+      - name: Upload Windows release ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: hp_company_collector_v0.10.0_windows-${{ env.SOURCE_SHA }}
+          path: dist/hp_company_collector_v0.10.0_windows.zip
+          if-no-files-found: error
+          retention-days: 14
