@@ -1,0 +1,41 @@
+thresholds:
+  official: 60
+  business_target: 55
+  review_margin: 8
+weights:
+  official:
+    phone: 10
+    address: 10
+    identity: 12
+    structured_business: 10
+    company_page: 8
+    contact_page: 6
+    access_page: 6
+    industry_match: 10
+    region_match: 10
+    own_domain: 8
+    copyright_match: 5
+    job: -35
+    article: -25
+    ranking: -30
+    portal: -50
+    multiple_companies: -25
+    many_external_links: -15
+    region_mismatch: -20
+    industry_mismatch: -20
+  business:
+    official_factor: 0.5
+    phone: 15
+    mobile_phone: 5
+    address: 10
+    identity: 10
+    official_or_store_page: 10
+    review_penalty: -10
+limits:
+  many_external_links: 8
+  multiple_companies: 3
+hard_excluded_page_types:
+  - portal
+  - job
+  - article
+  - directory
