@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Bing: sample</title>
+    <item>
+      <title>株式会社サンプル 公式サイト</title>
+      <link>https://sample.example.jp/</link>
+      <description>東京都千代田区のサンプル企業です。</description>
+    </item>
+    <item>
+      <title>サンプル食堂</title>
+      <link>https://restaurant.example.jp/about</link>
+      <description>店舗情報</description>
+    </item>
+    <item>
+      <title>URLなしの無効項目</title>
+      <description>無視されます</description>
+    </item>
+  </channel>
+</rss>
