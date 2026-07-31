@@ -1,0 +1,8 @@
+User-agent: hp-company-collector
+Disallow: /private/
+Allow: /private/public.html
+Crawl-delay: 3
+
+User-agent: *
+Disallow: /blocked/
+Crawl-delay: 9
