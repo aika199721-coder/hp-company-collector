@@ -29,6 +29,9 @@ def test_powershell51_probes_empty_launcher_and_hpcc_prefixes(tmp_path: Path) ->
     script.write_text(
         "\n".join(
             (
+                "$utf8 = New-Object System.Text.UTF8Encoding($false)",
+                "[Console]::OutputEncoding = $utf8",
+                "$script:OutputEncoding = $utf8",
                 f". '{_powershell_literal(common)}'",
                 f"$env:HPCC_PYTHON = '{_powershell_literal(Path(sys.executable))}'",
                 "$empty = [pscustomobject]@{ Exe = $env:HPCC_PYTHON; Prefix = @(); "
@@ -66,17 +69,20 @@ def test_powershell51_probes_empty_launcher_and_hpcc_prefixes(tmp_path: Path) ->
         ],
         capture_output=True,
         check=False,
+        encoding="utf-8",
+        errors="replace",
         text=True,
     )
 
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert completed.stdout.count("version=3.13 bits=64") == 2
-    assert "Python候補 [HPCC_PYTHON]" in completed.stdout
-    assert "Python候補 [py -3.13]" in completed.stdout
-    assert "Python候補の検証例外 [broken]" in completed.stdout
-    assert "Python候補のprobe失敗 [failed]" in completed.stdout
-    assert "exit=7 output=probe-stderr" in completed.stdout
-    assert "DYNAMIC_PROBE_OK" in completed.stdout
+    output = (completed.stdout or "") + (completed.stderr or "")
+    assert completed.returncode == 0, output
+    assert output.count("version=3.13 bits=64") == 2
+    assert "Python候補 [HPCC_PYTHON]" in output
+    assert "Python候補 [py -3.13]" in output
+    assert "Python候補の検証例外 [broken]" in output
+    assert "Python候補のprobe失敗 [failed]" in output
+    assert "exit=7 output=probe-stderr" in output
+    assert "DYNAMIC_PROBE_OK" in output
 
 
 def _powershell_literal(path: Path) -> str:
