@@ -1,0 +1,17 @@
+providers:
+  bing_rss:
+    enabled: true
+    priority: 10
+  duckduckgo_html:
+    enabled: true
+    priority: 20
+  brave_search:
+    enabled: true
+    priority: 30
+  mojeek:
+    enabled: true
+    priority: 40
+  searxng:
+    enabled: false
+    priority: 50
+    base_url: ""
