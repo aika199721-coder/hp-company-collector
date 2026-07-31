@@ -1,0 +1,21 @@
+# One domain per line. Subdomains are excluded by suffix matching in a later phase.
+wikipedia.org
+facebook.com
+instagram.com
+x.com
+youtube.com
+indeed.com
+townwork.net
+itp.ne.jp
+hotpepper.jp
+tabelog.com
+mapion.co.jp
+navitime.co.jp
+rakuten.co.jp
+amazon.co.jp
+prtimes.jp
+ameblo.jp
+note.com
+mynavi.jp
+en-gage.net
+wantedly.com

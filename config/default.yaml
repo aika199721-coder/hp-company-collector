@@ -1,0 +1,35 @@
+project:
+  name: hp-company-collector
+  version: 4
+
+paths:
+  database: data/collector.sqlite3
+  input: input
+  output: output
+  logs: logs
+
+search:
+  results_per_query: 20
+
+crawler:
+  respect_robots_txt: true
+  per_domain_delay_seconds: 2.0
+  request_timeout_seconds: 20
+  max_redirects: 5
+  user_agent: hp-company-collector/4.0
+  resume_enabled: true
+  playwright_fallback_statuses:
+    - 403
+  playwright:
+    enabled: false
+    browser: chromium
+
+logging:
+  level: INFO
+  file: logs/collector.log
+
+runtime:
+  input_mode: strict
+  continue_on_condition_error: true
+  export_after_each_condition: false
+  export_on_shutdown: true

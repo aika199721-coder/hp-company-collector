@@ -1,0 +1,82 @@
+name: Offline tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest
+      - run: python -m ruff check .
+      - name: Validate PowerShell syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-ChildItem scripts/windows/*.ps1 | ForEach-Object {
+            [void][scriptblock]::Create((Get-Content -Raw -LiteralPath $_.FullName))
+          }
+
+  windows-release:
+    name: Build Windows release artifact
+    needs: python
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          architecture: x64
+      - name: Confirm checkout commit and clean source tree
+        run: |
+          echo "Artifact source commit: $(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git status --porcelain)"
+      - name: Build and validate release ZIP
+        run: python scripts/build_release.py
+      - name: Verify packaged setupfix8 content and SHA256
+        run: |
+          ZIP=dist/hp_company_collector_v0.10.0_windows.zip
+          SOURCE_BAT_SHA=$(sha256sum setup.bat | cut -d' ' -f1)
+          ZIP_BAT_SHA=$(unzip -p "$ZIP" hp_company_collector/setup.bat | sha256sum | cut -d' ' -f1)
+          SOURCE_PS_SHA=$(sha256sum scripts/windows/setup.ps1 | cut -d' ' -f1)
+          ZIP_PS_SHA=$(unzip -p "$ZIP" hp_company_collector/scripts/windows/setup.ps1 | sha256sum | cut -d' ' -f1)
+          echo "setup.bat source SHA256: $SOURCE_BAT_SHA"
+          echo "setup.bat archive SHA256: $ZIP_BAT_SHA"
+          echo "setup.ps1 source SHA256: $SOURCE_PS_SHA"
+          echo "setup.ps1 archive SHA256: $ZIP_PS_SHA"
+          test "$SOURCE_BAT_SHA" = "$ZIP_BAT_SHA"
+          test "$SOURCE_PS_SHA" = "$ZIP_PS_SHA"
+          unzip -p "$ZIP" hp_company_collector/setup.bat | grep -F "setupfix8-v1"
+          unzip -p "$ZIP" hp_company_collector/scripts/windows/setup.ps1 | grep -F "setupfix8-v1"
+          ! unzip -p "$ZIP" hp_company_collector/setup.bat | grep -i "cmdcmdline"
+      - name: Verify release filename
+        run: test -f dist/hp_company_collector_v0.10.0_windows.zip
+      - name: Confirm build did not modify tracked files
+        run: test -z "$(git status --porcelain)"
+      - name: Upload Windows release ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: hp_company_collector_v0.10.0_windows-${{ env.SOURCE_SHA }}
+          path: dist/hp_company_collector_v0.10.0_windows.zip
+          if-no-files-found: error
+          retention-days: 14
