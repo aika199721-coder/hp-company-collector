@@ -94,6 +94,12 @@ def test_powershell_detection_contains_required_priority_and_probe() -> None:
     assert "struct.calcsize(\"P\") * 8" in common
     assert "\\WindowsApps\\" in common
     assert "$version -ne '3.13' -or $bits -ne 64" in common
+    assert "$probeArguments = @($Candidate.Prefix) + @(" in common
+    assert "$probe = & $exe @probeArguments 2>&1" in common
+    assert "Python候補のprobe失敗" in common
+    assert "Python候補の検証例外" in common
+    assert "$invokeArguments = @($Python.Prefix) + @($Arguments)" in common
+    assert "& $Python.Exe @invokeArguments" in common
 
 
 def test_hpcc_python_is_confirmed_before_other_system_candidates() -> None:

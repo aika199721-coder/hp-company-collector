@@ -107,10 +107,18 @@ function Test-PythonCandidate {
         return $null
     }
     try {
-        $probe = & $exe @($Candidate.Prefix) -c `
-            'import sys, struct; print(sys.executable); print("%d.%d" % sys.version_info[:2]); print(struct.calcsize("P") * 8)' `
-            2>$null
-        if ($LASTEXITCODE -ne 0 -or @($probe).Count -lt 3) { return $null }
+        $probeArguments = @($Candidate.Prefix) + @(
+            '-c',
+            'import sys, struct; print(sys.executable); print("%d.%d" % sys.version_info[:2]); print(struct.calcsize("P") * 8)'
+        )
+        $probe = & $exe @probeArguments 2>&1
+        [int]$probeExitCode = $LASTEXITCODE
+        if ($probeExitCode -ne 0 -or @($probe).Count -lt 3) {
+            $probeOutput = @($probe) -join [Environment]::NewLine
+            Write-Host "Python候補のprobe失敗 [$($Candidate.Source)]: " `
+                "exit=$probeExitCode output=$probeOutput"
+            return $null
+        }
         $path = "$($probe[0])".Trim()
         $version = "$($probe[1])".Trim()
         [int]$bits = "$($probe[2])".Trim()
@@ -126,6 +134,7 @@ function Test-PythonCandidate {
             Bits = $bits
         }
     } catch {
+        Write-Host "Python候補の検証例外 [$($Candidate.Source)]: $($_.Exception.Message)"
         return $null
     }
 }
@@ -183,7 +192,8 @@ function Invoke-Python313 {
         [Parameter(Mandatory = $true)][object]$Python,
         [Parameter(Mandatory = $true)][string[]]$Arguments
     )
-    & $Python.Exe @($Python.Prefix) @Arguments
+    $invokeArguments = @($Python.Prefix) + @($Arguments)
+    & $Python.Exe @invokeArguments
     return [int]$LASTEXITCODE
 }
 
