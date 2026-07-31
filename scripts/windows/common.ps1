@@ -51,8 +51,6 @@ function Get-PythonCandidates {
     [CmdletBinding()]
     param([string]$Root = (Get-ProjectRoot))
     $candidates = New-Object System.Collections.ArrayList
-    Add-PythonCandidate -Candidates $candidates -Exe $env:HPCC_PYTHON `
-        -Prefix @() -Source 'HPCC_PYTHON'
     $command = Get-Command python.exe -ErrorAction SilentlyContinue
     if ($null -ne $command) {
         $commandPath = if ($command.Source) { $command.Source } else { $command.Path }
@@ -76,8 +74,6 @@ function Get-PythonCandidates {
             -Exe (Join-Path $env:Python_ROOT_DIR 'python.exe') `
             -Prefix @() -Source 'Python_ROOT_DIR'
     }
-    Add-PythonCandidate -Candidates $candidates `
-        -Exe (Join-Path $Root '.venv\Scripts\python.exe') -Prefix @() -Source '.venv'
     Add-PythonCandidate -Candidates $candidates -Exe 'py' `
         -Prefix @('-3.13') -Source 'py -3.13'
     Add-PythonCandidate -Candidates $candidates -Exe 'python' -Prefix @() -Source 'python'
@@ -151,6 +147,19 @@ function Find-Python313 {
     [CmdletBinding()]
     param([string]$Root = (Get-ProjectRoot))
     Write-PythonDiagnostics
+    if (-not [string]::IsNullOrWhiteSpace($env:HPCC_PYTHON)) {
+        $configuredCandidates = New-Object System.Collections.ArrayList
+        Add-PythonCandidate -Candidates $configuredCandidates -Exe $env:HPCC_PYTHON `
+            -Prefix @() -Source 'HPCC_PYTHON'
+        $configured = $configuredCandidates[0]
+        $accepted = Test-PythonCandidate -Candidate $configured
+        if ($null -ne $accepted) {
+            Write-Host "最終採用Python: $($accepted.Path)"
+            Write-Host "Python version: $($accepted.Version)"
+            Write-Host "Python bit数: $($accepted.Bits)"
+            return $accepted
+        }
+    }
     $candidates = @(Get-PythonCandidates -Root $Root)
     if ($candidates.Count -eq 0) {
         Write-Information 'Python 3.13候補が見つかりません' -InformationAction Continue

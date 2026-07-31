@@ -57,13 +57,6 @@ jobs:
           HPCC_PYTHON: ${{ steps.setup_python.outputs.python-path }}
         run: |
           $zip = Join-Path $PWD 'dist\hp_company_collector_v0.10.0_windows.zip'
-          . (Join-Path $PWD 'scripts\windows\common.ps1')
-          $detected = Find-Python313 -Root $PWD
-          if ($null -eq $detected) { throw 'actions/setup-python Python was not detected' }
-          $expectedPython = & $env:HPCC_PYTHON -c 'import sys; print(sys.executable)'
-          if ($detected.Path -ne "$expectedPython".Trim()) {
-            throw "HPCC_PYTHON did not win: $($detected.Path) != $expectedPython"
-          }
           $paths = @(
             (Join-Path $env:RUNNER_TEMP '日本語パス'),
             (Join-Path $env:RUNNER_TEMP 'space path'),

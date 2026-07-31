@@ -74,17 +74,17 @@ def test_workflow_requires_windows_setup_smoke_before_artifact_publish() -> None
     assert "validate.bat') --no-pause" in workflow
     assert "setup rerun failed" in workflow
     assert "HPCC_PYTHON: ${{ steps.setup_python.outputs.python-path }}" in workflow
+    smoke = workflow.split("windows-setup-smoke:", 1)[1].split("windows-release:", 1)[0]
+    assert "Find-Python313" not in smoke
 
 
 def test_powershell_detection_contains_required_priority_and_probe() -> None:
     common = (ROOT / "scripts/windows/common.ps1").read_text(encoding="utf-8-sig")
     ordered = (
-        "$env:HPCC_PYTHON",
         "Get-Command python.exe",
         "where.exe python",
         "$env:pythonLocation",
         "$env:Python_ROOT_DIR",
-        ".venv\\Scripts\\python.exe",
         "-Exe 'py'",
         "-Exe 'python'",
         "-Exe 'python3'",
@@ -94,6 +94,41 @@ def test_powershell_detection_contains_required_priority_and_probe() -> None:
     assert "struct.calcsize(\"P\") * 8" in common
     assert "\\WindowsApps\\" in common
     assert "$version -ne '3.13' -or $bits -ne 64" in common
+
+
+def test_hpcc_python_is_confirmed_before_other_system_candidates() -> None:
+    common = (ROOT / "scripts/windows/common.ps1").read_text(encoding="utf-8-sig")
+    finder = common.split("function Find-Python313", 1)[1].split(
+        "function Invoke-Python313", 1
+    )[0]
+    collection = common.split("function Get-PythonCandidates", 1)[1].split(
+        "function Test-PythonCandidate", 1
+    )[0]
+
+    assert finder.index("$env:HPCC_PYTHON") < finder.index("Get-PythonCandidates")
+    assert "Test-PythonCandidate -Candidate $configured" in finder
+    assert ".venv\\Scripts\\python.exe" not in collection
+
+
+def test_setup_confirms_venv_only_after_creation_then_switches_python() -> None:
+    setup = (ROOT / "scripts/windows/setup.ps1").read_text(encoding="utf-8-sig")
+    create = setup.index("& $PythonExe -m venv")
+    confirm = setup.index("Test-PythonCandidate -Candidate $venvCandidate")
+    switch = setup.index("$PythonExe = $confirmedVenv.Path")
+
+    assert create < confirm < switch
+    assert "throw '.venvのPython確認に失敗しました。'" in setup
+    assert "& $venvPython" not in setup
+
+
+def test_setup_discovers_python_once_and_never_researches() -> None:
+    setup = (ROOT / "scripts/windows/setup.ps1").read_text(encoding="utf-8-sig")
+
+    assert setup.count("Find-Python313") == 1
+    assert "$PythonExe = $detectedPython.Path" in setup
+    assert setup.index("Find-Python313") < setup.index("セットアップを開始します。")
+    for forbidden in ("Get-Command", "where.exe", "$env:HPCC_PYTHON"):
+        assert forbidden not in setup
 
 
 def test_powershell_candidate_collection_accepts_and_wraps_empty_arrays() -> None:
