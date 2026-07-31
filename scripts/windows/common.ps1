@@ -107,16 +107,14 @@ function Test-PythonCandidate {
         return $null
     }
     try {
-        $probeArguments = @($Candidate.Prefix) + @(
-            '-c',
-            'import sys, struct; print(sys.executable); print("%d.%d" % sys.version_info[:2]); print(struct.calcsize("P") * 8)'
-        )
+        $probeCode = "import sys, struct; print(sys.executable); print('%d.%d' % sys.version_info[:2]); print(struct.calcsize('P') * 8)"
+        $probeArguments = @($Candidate.Prefix) + @('-c', $probeCode)
         $probe = & $exe @probeArguments 2>&1
         [int]$probeExitCode = $LASTEXITCODE
         if ($probeExitCode -ne 0 -or @($probe).Count -lt 3) {
             $probeOutput = @($probe) -join [Environment]::NewLine
             Write-Host "Python候補のprobe失敗 [$($Candidate.Source)]: " `
-                "exit=$probeExitCode output=$probeOutput"
+                "exit=$probeExitCode output=$probeOutput code=$probeCode"
             return $null
         }
         $path = "$($probe[0])".Trim()

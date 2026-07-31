@@ -91,12 +91,16 @@ def test_powershell_detection_contains_required_priority_and_probe() -> None:
     )
     positions = [common.index(value) for value in ordered]
     assert positions == sorted(positions)
-    assert "struct.calcsize(\"P\") * 8" in common
+    assert "struct.calcsize('P') * 8" in common
+    assert 'print("%d.%d"' not in common
+    assert 'struct.calcsize("P")' not in common
     assert "\\WindowsApps\\" in common
     assert "$version -ne '3.13' -or $bits -ne 64" in common
-    assert "$probeArguments = @($Candidate.Prefix) + @(" in common
+    assert '$probeCode = "import sys, struct;' in common
+    assert "$probeArguments = @($Candidate.Prefix) + @('-c', $probeCode)" in common
     assert "$probe = & $exe @probeArguments 2>&1" in common
     assert "Python候補のprobe失敗" in common
+    assert "code=$probeCode" in common
     assert "Python候補の検証例外" in common
     assert "$invokeArguments = @($Python.Prefix) + @($Arguments)" in common
     assert "& $Python.Exe @invokeArguments" in common
