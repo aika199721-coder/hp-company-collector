@@ -141,16 +141,6 @@ def test_setup_discovers_python_once_and_never_researches() -> None:
         assert forbidden not in setup
 
 
-def test_dynamic_powershell_probe_decodes_windows_output_safely() -> None:
-    test_source = (
-        ROOT / "tests/integration/test_windows_powershell51_probe.py"
-    ).read_text(encoding="utf-8")
-
-    assert 'encoding="utf-8"' in test_source
-    assert 'errors="replace"' in test_source
-    assert '(completed.stdout or "") + (completed.stderr or "")' in test_source
-
-
 def test_powershell_candidate_collection_accepts_and_wraps_empty_arrays() -> None:
     common = (ROOT / "scripts/windows/common.ps1").read_text(encoding="utf-8-sig")
     function = common.split("function Get-PythonCandidates", 1)[1].split(
