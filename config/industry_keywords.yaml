@@ -1,0 +1,20 @@
+# Initial examples. Operators may extend these groups without changing Python code.
+industries:
+  restaurant:
+    display_name: 飲食店
+    keywords:
+      - レストラン
+      - 飲食店
+      - 居酒屋
+  construction:
+    display_name: 建設業
+    keywords:
+      - 建設会社
+      - 工務店
+      - リフォーム
+  beauty:
+    display_name: 美容業
+    keywords:
+      - 美容室
+      - 理容室
+      - エステ

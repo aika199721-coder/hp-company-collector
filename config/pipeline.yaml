@@ -1,0 +1,4 @@
+limits:
+  max_business_targets_per_condition: 500
+  max_candidates_per_condition: 2000
+  count_no_phone_as_business_target: false

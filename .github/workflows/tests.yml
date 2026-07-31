@@ -1,0 +1,51 @@
+name: Offline tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest
+      - run: python -m ruff check .
+      - name: Validate PowerShell syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-ChildItem scripts/windows/*.ps1 | ForEach-Object {
+            [void][scriptblock]::Create((Get-Content -Raw -LiteralPath $_.FullName))
+          }
+
+  windows-release:
+    name: Build Windows release artifact
+    needs: python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          architecture: x64
+      - name: Build and validate release ZIP
+        run: python scripts/build_release.py
+      - name: Verify release filename
+        run: test -f dist/hp_company_collector_v0.10.0_windows.zip
+      - name: Upload Windows release ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: hp_company_collector_v0.10.0_windows
+          path: dist/hp_company_collector_v0.10.0_windows.zip
+          if-no-files-found: error
+          retention-days: 14
