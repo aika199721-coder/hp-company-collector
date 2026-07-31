@@ -27,6 +27,15 @@ try {
                 -Arguments @('-m', 'venv', (Join-Path $root '.venv'))
             if ($venvCode -ne 0) { throw '.venvの作成に失敗しました。' }
         }
+        $venvCandidate = [pscustomobject]@{
+            Exe = $venvPython
+            Prefix = @()
+            Source = '.venv'
+        }
+        $confirmedVenv = Test-PythonCandidate -Candidate $venvCandidate
+        if ($null -eq $confirmedVenv) { throw '.venvのPython確認に失敗しました。' }
+        $python = $confirmedVenv
+        $venvPython = $python.Exe
         & $venvPython -m pip install --upgrade pip
         if ($LASTEXITCODE -ne 0) { throw 'pipの更新に失敗しました。' }
         & $venvPython -m pip install -r (Join-Path $root 'requirements.txt')
