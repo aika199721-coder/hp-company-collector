@@ -51,8 +51,6 @@ function Get-PythonCandidates {
     [CmdletBinding()]
     param([string]$Root = (Get-ProjectRoot))
     $candidates = New-Object System.Collections.ArrayList
-    Add-PythonCandidate -Candidates $candidates -Exe $env:HPCC_PYTHON `
-        -Prefix @() -Source 'HPCC_PYTHON'
     $command = Get-Command python.exe -ErrorAction SilentlyContinue
     if ($null -ne $command) {
         $commandPath = if ($command.Source) { $command.Source } else { $command.Path }
@@ -76,8 +74,6 @@ function Get-PythonCandidates {
             -Exe (Join-Path $env:Python_ROOT_DIR 'python.exe') `
             -Prefix @() -Source 'Python_ROOT_DIR'
     }
-    Add-PythonCandidate -Candidates $candidates `
-        -Exe (Join-Path $Root '.venv\Scripts\python.exe') -Prefix @() -Source '.venv'
     Add-PythonCandidate -Candidates $candidates -Exe 'py' `
         -Prefix @('-3.13') -Source 'py -3.13'
     Add-PythonCandidate -Candidates $candidates -Exe 'python' -Prefix @() -Source 'python'
@@ -111,10 +107,16 @@ function Test-PythonCandidate {
         return $null
     }
     try {
-        $probe = & $exe @($Candidate.Prefix) -c `
-            'import sys, struct; print(sys.executable); print("%d.%d" % sys.version_info[:2]); print(struct.calcsize("P") * 8)' `
-            2>$null
-        if ($LASTEXITCODE -ne 0 -or @($probe).Count -lt 3) { return $null }
+        $probeCode = "import sys, struct; print(sys.executable); print('%d.%d' % sys.version_info[:2]); print(struct.calcsize('P') * 8)"
+        $probeArguments = @($Candidate.Prefix) + @('-c', $probeCode)
+        $probe = & $exe @probeArguments 2>&1
+        [int]$probeExitCode = $LASTEXITCODE
+        if ($probeExitCode -ne 0 -or @($probe).Count -lt 3) {
+            $probeOutput = @($probe) -join [Environment]::NewLine
+            Write-Host "Python候補のprobe失敗 [$($Candidate.Source)]: " `
+                "exit=$probeExitCode output=$probeOutput code=$probeCode"
+            return $null
+        }
         $path = "$($probe[0])".Trim()
         $version = "$($probe[1])".Trim()
         [int]$bits = "$($probe[2])".Trim()
@@ -130,6 +132,7 @@ function Test-PythonCandidate {
             Bits = $bits
         }
     } catch {
+        Write-Host "Python候補の検証例外 [$($Candidate.Source)]: $($_.Exception.Message)"
         return $null
     }
 }
@@ -151,6 +154,19 @@ function Find-Python313 {
     [CmdletBinding()]
     param([string]$Root = (Get-ProjectRoot))
     Write-PythonDiagnostics
+    if (-not [string]::IsNullOrWhiteSpace($env:HPCC_PYTHON)) {
+        $configuredCandidates = New-Object System.Collections.ArrayList
+        Add-PythonCandidate -Candidates $configuredCandidates -Exe $env:HPCC_PYTHON `
+            -Prefix @() -Source 'HPCC_PYTHON'
+        $configured = $configuredCandidates[0]
+        $accepted = Test-PythonCandidate -Candidate $configured
+        if ($null -ne $accepted) {
+            Write-Host "最終採用Python: $($accepted.Path)"
+            Write-Host "Python version: $($accepted.Version)"
+            Write-Host "Python bit数: $($accepted.Bits)"
+            return $accepted
+        }
+    }
     $candidates = @(Get-PythonCandidates -Root $Root)
     if ($candidates.Count -eq 0) {
         Write-Information 'Python 3.13候補が見つかりません' -InformationAction Continue
@@ -174,7 +190,8 @@ function Invoke-Python313 {
         [Parameter(Mandatory = $true)][object]$Python,
         [Parameter(Mandatory = $true)][string[]]$Arguments
     )
-    & $Python.Exe @($Python.Prefix) @Arguments
+    $invokeArguments = @($Python.Prefix) + @($Arguments)
+    & $Python.Exe @invokeArguments
     return [int]$LASTEXITCODE
 }
 

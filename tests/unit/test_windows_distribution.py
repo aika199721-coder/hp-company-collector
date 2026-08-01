@@ -23,11 +23,12 @@ def test_bat_is_thin_root_relative_and_preserves_exit_code(command: str) -> None
 
 def test_common_script_handles_python_paths_logs_and_pause() -> None:
     content = (ROOT / "scripts/windows/common.ps1").read_text(encoding="utf-8")
-    expected_values = (
-        "Find-Python313", ".venv\\Scripts\\python.exe", "Start-Transcript", "PauseOnExit"
-    )
+    expected_values = ("Find-Python313", "Start-Transcript", "PauseOnExit")
     for expected in expected_values:
         assert expected in content
+    assert ".venv\\Scripts\\python.exe" not in content
+    setup = (ROOT / "scripts/windows/setup.ps1").read_text(encoding="utf-8")
+    assert ".venv\\Scripts\\python.exe" in setup
 
 
 def test_reset_requires_confirmation_and_setup_preserves_input() -> None:
