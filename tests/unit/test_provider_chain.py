@@ -49,3 +49,19 @@ def test_chain_falls_back_deduplicates_and_scores_evidence() -> None:
     ]
     assert results[0].provider == "duckduckgo_html"
     assert results[0].match_score >= results[1].match_score
+
+
+def test_chain_falls_back_after_empty_results_and_provider_failure() -> None:
+    """An empty or broken provider must not prevent a later provider result."""
+    providers = [
+        FakeProvider("empty", []),
+        FakeProvider("broken", [], fail=True),
+        FakeProvider(
+            "fallback",
+            [item("那覇市 美容室", "https://salon.example/", "fallback", 1)],
+        ),
+    ]
+
+    results = ProviderChain(providers).search("沖縄県 那覇市 美容室", 10)
+
+    assert [result.url for result in results] == ["https://salon.example/"]

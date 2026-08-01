@@ -4,7 +4,7 @@ from pathlib import Path
 
 from application.config import ApplicationConfigLoader
 from live.config import LiveValidationConfig
-from live.service import LiveValidationService
+from live.service import LiveValidationService, _has_required_results
 from tests.unit.test_application_config import copy_config
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,5 +44,33 @@ def test_explicit_yes_can_start_bounded_empty_run(tmp_path: Path) -> None:
     outcome = service.run(yes=True)
 
     assert outcome.started is True
+    assert outcome.exit_code != 0
     assert config.database_path.exists()
     assert (config.output_path / "live_validation_report.xlsx").exists()
+
+
+def test_live_success_requires_official_fetch_and_contact() -> None:
+    """A completed collection without all three outcomes is not successful."""
+    from types import SimpleNamespace
+
+    complete = SimpleNamespace(
+        official_count=1,
+        results=(
+            SimpleNamespace(
+                fetch_result=SimpleNamespace(status_code=200),
+                extraction_result=SimpleNamespace(phones=("098",), address=None),
+            ),
+        ),
+    )
+    missing_contact = SimpleNamespace(
+        official_count=1,
+        results=(
+            SimpleNamespace(
+                fetch_result=SimpleNamespace(status_code=200),
+                extraction_result=SimpleNamespace(phones=(), address=None),
+            ),
+        ),
+    )
+
+    assert _has_required_results((complete,)) is True
+    assert _has_required_results((missing_contact,)) is False

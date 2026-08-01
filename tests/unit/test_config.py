@@ -17,9 +17,8 @@ def test_loads_default_and_supporting_configuration() -> None:
     assert config["crawler"]["respect_robots_txt"] is True
     assert [name for name, _ in manager.load_providers()] == [
         "bing_rss",
-        "duckduckgo_html",
-        "brave_search",
-        "mojeek",
+        "bing_html",
+        "yahoo_japan_html",
     ]
     assert manager.load_industries()["restaurant"]["display_name"] == "飲食店"
     assert "wikipedia.org" in manager.load_excluded_domains()

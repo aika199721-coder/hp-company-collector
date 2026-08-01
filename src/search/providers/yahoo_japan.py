@@ -1,4 +1,4 @@
-"""Mojeek HTML search provider."""
+"""Yahoo! JAPAN HTML search provider."""
 
 from __future__ import annotations
 
@@ -8,32 +8,34 @@ from search.providers.base import SearchResult
 from search.providers.html_base import HtmlSearchProvider
 
 
-class MojeekProvider(HtmlSearchProvider):
-    """Parse Mojeek standard result list markup."""
+class YahooJapanHtmlProvider(HtmlSearchProvider):
+    """Parse Yahoo! JAPAN web-search result cards."""
 
-    endpoint = "https://www.mojeek.com/search"
+    endpoint = "https://search.yahoo.co.jp/search"
 
     @property
     def name(self) -> str:
-        return "mojeek"
+        """Return the provider configuration identifier."""
+        return "yahoo_japan_html"
+
+    def _params(self, query: str) -> dict[str, str]:
+        return {"p": query}
 
     def parse(self, content: bytes, limit: int) -> list[SearchResult]:
+        """Extract URL, title, and description from Yahoo result cards."""
         soup = BeautifulSoup(content, "html.parser")
         results: list[SearchResult] = []
-        for node in soup.select("ul.results > li, ul.results-standard > li"):
-            link = node.select_one("h2 a[href], a.ob[href]")
+        for node in soup.select(".sw-CardBase"):
+            link = node.select_one("h3 a[href]")
             if link is None:
                 continue
             url = str(link.get("href", ""))
             if not url.startswith(("http://", "https://")):
                 continue
-            title_node = node.select_one("h2")
-            snippet = node.select_one("p.s, .result-desc, p")
+            snippet = node.select_one(".sw-Card__summary, p")
             results.append(
                 SearchResult(
-                    title_node.get_text(" ", strip=True)
-                    if title_node
-                    else link.get_text(" ", strip=True),
+                    link.get_text(" ", strip=True),
                     url,
                     snippet.get_text(" ", strip=True) if snippet else "",
                     self.name,

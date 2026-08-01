@@ -19,7 +19,7 @@ from live.http import BoundedHttpClient
 from live.report import LiveReportService
 from live.safety import LiveSafetyFetcher
 from live.search import BoundedSearchManager
-from pipeline.models import PipelineLimits
+from pipeline.models import PipelineLimits, PipelineSummary
 from storage.sqlite import Database
 
 
@@ -120,8 +120,28 @@ class LiveValidationService:
             audit_run_id,
             outcome.run_id or "",
         )
-        return LiveCheckOutcome(True, outcome.exit_code, outcome)
+        exit_code = outcome.exit_code
+        if exit_code == 0 and not _has_required_results(outcome.summaries):
+            exit_code = 4
+            outcome = replace(outcome, exit_code=exit_code)
+        return LiveCheckOutcome(True, exit_code, outcome)
 
     def _input_file(self) -> Path:
         path = self._application.input_path
         return path / "search_conditions.csv" if path.is_dir() else path
+
+
+def _has_required_results(summaries: tuple[PipelineSummary, ...]) -> bool:
+    """Require an official page, a successful fetch, and a phone or address."""
+    official = any(summary.official_count > 0 for summary in summaries)
+    fetched = False
+    contact = False
+    for summary in summaries:
+        for result in summary.results:
+            fetch = result.fetch_result
+            if fetch is not None and fetch.status_code is not None:
+                fetched = True
+            extraction = result.extraction_result
+            if extraction is not None and (extraction.phones or extraction.address is not None):
+                contact = True
+    return official and fetched and contact

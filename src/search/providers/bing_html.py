@@ -1,4 +1,4 @@
-"""Mojeek HTML search provider."""
+"""Bing HTML search provider restored as an RSS-independent route."""
 
 from __future__ import annotations
 
@@ -8,32 +8,31 @@ from search.providers.base import SearchResult
 from search.providers.html_base import HtmlSearchProvider
 
 
-class MojeekProvider(HtmlSearchProvider):
-    """Parse Mojeek standard result list markup."""
+class BingHtmlProvider(HtmlSearchProvider):
+    """Parse Bing's established ``li.b_algo`` result markup."""
 
-    endpoint = "https://www.mojeek.com/search"
+    endpoint = "https://www.bing.com/search"
 
     @property
     def name(self) -> str:
-        return "mojeek"
+        """Return the provider configuration identifier."""
+        return "bing_html"
 
     def parse(self, content: bytes, limit: int) -> list[SearchResult]:
+        """Extract URL, title, and description from Bing HTML results."""
         soup = BeautifulSoup(content, "html.parser")
         results: list[SearchResult] = []
-        for node in soup.select("ul.results > li, ul.results-standard > li"):
-            link = node.select_one("h2 a[href], a.ob[href]")
+        for node in soup.select("li.b_algo"):
+            link = node.select_one("h2 a[href]")
             if link is None:
                 continue
             url = str(link.get("href", ""))
             if not url.startswith(("http://", "https://")):
                 continue
-            title_node = node.select_one("h2")
-            snippet = node.select_one("p.s, .result-desc, p")
+            snippet = node.select_one(".b_caption p, p")
             results.append(
                 SearchResult(
-                    title_node.get_text(" ", strip=True)
-                    if title_node
-                    else link.get_text(" ", strip=True),
+                    link.get_text(" ", strip=True),
                     url,
                     snippet.get_text(" ", strip=True) if snippet else "",
                     self.name,
