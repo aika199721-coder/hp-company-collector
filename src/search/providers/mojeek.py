@@ -20,17 +20,20 @@ class MojeekProvider(HtmlSearchProvider):
     def parse(self, content: bytes, limit: int) -> list[SearchResult]:
         soup = BeautifulSoup(content, "html.parser")
         results: list[SearchResult] = []
-        for node in soup.select("ul.results-standard > li, .results-standard .result"):
-            link = node.select_one("h2 a[href]")
+        for node in soup.select("ul.results > li, ul.results-standard > li"):
+            link = node.select_one("h2 a[href], a.ob[href]")
             if link is None:
                 continue
             url = str(link.get("href", ""))
             if not url.startswith(("http://", "https://")):
                 continue
-            snippet = node.select_one(".s, .result-desc, p")
+            title_node = node.select_one("h2")
+            snippet = node.select_one("p.s, .result-desc, p")
             results.append(
                 SearchResult(
-                    link.get_text(" ", strip=True),
+                    title_node.get_text(" ", strip=True)
+                    if title_node
+                    else link.get_text(" ", strip=True),
                     url,
                     snippet.get_text(" ", strip=True) if snippet else "",
                     self.name,

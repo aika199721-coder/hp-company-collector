@@ -34,6 +34,7 @@ def test_loads_all_files_resolves_paths_and_environment(tmp_path: Path) -> None:
     assert config.database_path == tmp_path / "custom/app.sqlite3"
     assert config.input_path == tmp_path / "input"
     assert config.providers["bing_rss"]["enabled"] is True
+    assert config.providers["brave_search"]["enabled"] is False
     assert config.pipeline_limits.max_candidates_per_condition == 2000
     assert config.log_level == "DEBUG"
     assert "itp.ne.jp" in config.excluded_domains

@@ -6,7 +6,7 @@ providers:
     enabled: true
     priority: 20
   brave_search:
-    enabled: true
+    enabled: false
     priority: 30
   mojeek:
     enabled: true
