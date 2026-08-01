@@ -18,7 +18,6 @@ def test_loads_default_and_supporting_configuration() -> None:
     assert [name for name, _ in manager.load_providers()] == [
         "bing_rss",
         "duckduckgo_html",
-        "brave_search",
         "mojeek",
     ]
     assert manager.load_industries()["restaurant"]["display_name"] == "飲食店"

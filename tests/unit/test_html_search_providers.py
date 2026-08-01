@@ -52,6 +52,7 @@ def test_html_provider_parses_ranked_urls(provider_type, fixture: str, expected:
         part for result, part in zip(results, expected, strict=True) if part in result.url
     ] == expected
     assert [result.rank for result in results] == [1, 2]
+    assert all(result.title and result.snippet for result in results)
     assert len(client.calls) == 1
 
 
