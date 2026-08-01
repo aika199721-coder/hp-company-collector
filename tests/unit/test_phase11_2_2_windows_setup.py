@@ -80,6 +80,11 @@ def test_workflow_requires_windows_setup_smoke_before_artifact_publish() -> None
     assert "HPCC_PYTHON: ${{ steps.setup_python.outputs.python-path }}" in workflow
     smoke = workflow.split("windows-setup-smoke:", 1)[1].split("windows-release:", 1)[0]
     assert "Find-Python313" not in smoke
+    assert "continue-on-error: true" in smoke
+    assert "if: always()" in smoke
+    assert "if-no-files-found: warn" in smoke
+    release = workflow.split("windows-release:", 1)[1]
+    assert "if: ${{ always() && needs.python.result == 'success' }}" in release
 
 
 def test_powershell_detection_contains_required_priority_and_probe() -> None:

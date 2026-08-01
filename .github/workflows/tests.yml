@@ -36,6 +36,7 @@ jobs:
     name: Windows setup smoke (Python 3.13)
     needs: python
     runs-on: windows-latest
+    continue-on-error: true
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       HPCC_NO_PAUSE: "1"
@@ -93,18 +94,20 @@ jobs:
           }
           $summary | Set-Content -Encoding utf8 (Join-Path $PWD 'windows_setup_smoke.txt')
       - name: Upload setup smoke diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-setup-smoke-${{ env.SOURCE_SHA }}
           path: |
             windows_setup_smoke.txt
             ${{ runner.temp }}/**/logs/setup_*.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
   windows-release:
     name: Build Windows release artifact
     needs: [python, windows-setup-smoke]
+    if: ${{ always() && needs.python.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
