@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+import yaml
 
 from utils.config import ConfigManager, ConfigurationError
 
@@ -20,6 +21,15 @@ def test_loads_default_and_supporting_configuration() -> None:
         "bing_html",
         "yahoo_japan_html",
     ]
+    providers = yaml.safe_load((CONFIG_DIR / "providers.yaml").read_text(encoding="utf-8"))[
+        "providers"
+    ]
+    assert all(providers[name]["enabled"] for name in ("bing_rss", "bing_html"))
+    assert providers["yahoo_japan_html"]["enabled"] is True
+    assert all(
+        not providers[name]["enabled"]
+        for name in ("duckduckgo_html", "brave_search", "mojeek")
+    )
     assert manager.load_industries()["restaurant"]["display_name"] == "飲食店"
     assert "wikipedia.org" in manager.load_excluded_domains()
 
