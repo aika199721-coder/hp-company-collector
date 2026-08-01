@@ -5,9 +5,11 @@ from pathlib import Path
 import pytest
 
 from search.provider_chain import ProviderChain
+from search.providers.bing_html import BingHtmlProvider
 from search.providers.brave import BraveSearchProvider
 from search.providers.duckduckgo import DuckDuckGoHtmlProvider
 from search.providers.mojeek import MojeekProvider
+from search.providers.yahoo_japan import YahooJapanHtmlProvider
 
 SAMPLES = Path(__file__).resolve().parents[1] / "html_samples"
 
@@ -41,6 +43,8 @@ class FakeClient:
         (DuckDuckGoHtmlProvider, "duckduckgo_results.html", ["salon-a", "salon-b"]),
         (BraveSearchProvider, "brave_results.html", ["salon-c", "salon-a"]),
         (MojeekProvider, "mojeek_results.html", ["salon-d", "salon-e"]),
+        (BingHtmlProvider, "bing_html_results.html", ["hair-switch", "arglarte"]),
+        (YahooJapanHtmlProvider, "yahoo_japan_results.html", ["embellir", "newwave"]),
     ],
 )
 def test_html_provider_parses_ranked_urls(provider_type, fixture: str, expected: list[str]) -> None:

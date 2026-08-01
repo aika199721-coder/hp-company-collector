@@ -21,11 +21,13 @@ from pipeline.processor import CandidateProcessor
 from scoring.facade import ScoringFacade
 from search.audit import SearchProviderAuditRepository
 from search.manager import SearchManager
+from search.providers.bing_html import BingHtmlProvider
 from search.providers.bing_rss import BingRSSProvider
 from search.providers.brave import BraveSearchProvider
 from search.providers.duckduckgo import DuckDuckGoHtmlProvider
 from search.providers.mojeek import MojeekProvider
 from search.providers.searxng import SearXNGProvider
+from search.providers.yahoo_japan import YahooJapanHtmlProvider
 from search.query_builder import QueryBuilder
 from search.relevance import SearchResultClassifier
 from status.service import StatusService
@@ -254,6 +256,10 @@ def _build_search_providers(config: ApplicationConfig, client: Any) -> list[Any]
     """Build enabled free providers in configured priority order."""
     factories = {
         "bing_rss": lambda settings: BingRSSProvider(client, config.request_timeout_seconds),
+        "bing_html": lambda settings: BingHtmlProvider(client, config.request_timeout_seconds),
+        "yahoo_japan_html": lambda settings: YahooJapanHtmlProvider(
+            client, config.request_timeout_seconds
+        ),
         "duckduckgo_html": lambda settings: DuckDuckGoHtmlProvider(
             client, config.request_timeout_seconds
         ),

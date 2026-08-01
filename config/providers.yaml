@@ -2,16 +2,22 @@ providers:
   bing_rss:
     enabled: true
     priority: 10
-  duckduckgo_html:
+  bing_html:
     enabled: true
     priority: 20
+  yahoo_japan_html:
+    enabled: true
+    priority: 30
+  duckduckgo_html:
+    enabled: false
+    priority: 40
   brave_search:
     enabled: false
-    priority: 30
+    priority: 50
   mojeek:
-    enabled: true
-    priority: 40
+    enabled: false
+    priority: 60
   searxng:
     enabled: false
-    priority: 50
+    priority: 70
     base_url: ""
