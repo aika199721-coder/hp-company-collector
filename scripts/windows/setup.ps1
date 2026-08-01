@@ -19,8 +19,9 @@ try {
         Write-Host 'Microsoft Storeが開く場合はアプリ実行エイリアスのpythonを無効にしてください。'
         [int]$code = 2
     } else {
-        $bits = & $PythonExe -c `
-            'import struct; print(struct.calcsize("P") * 8)'
+        $bitsCode = "import struct; print(struct.calcsize('P') * 8)"
+        $bitsArguments = @('-c', $bitsCode)
+        $bits = & $PythonExe @bitsArguments
         if ($LASTEXITCODE -ne 0) { throw 'Python bit数の確認に失敗しました。' }
         if ("$bits".Trim() -ne '64') { Write-Warning '64bit版Python 3.13を推奨します。' }
         $venvPython = Join-Path $root '.venv\Scripts\python.exe'
@@ -40,8 +41,9 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'pipの更新に失敗しました。' }
         & $PythonExe -m pip install -r (Join-Path $root 'requirements.txt')
         if ($LASTEXITCODE -ne 0) { throw 'requirements.txtの導入に失敗しました。' }
-        $enabled = & $PythonExe -c `
-            "import yaml; print(str(yaml.safe_load(open('config/default.yaml', encoding='utf-8'))['crawler']['playwright']['enabled']).lower())"
+        $playwrightCode = "import yaml; print(str(yaml.safe_load(open('config/default.yaml', encoding='utf-8'))['crawler']['playwright']['enabled']).lower())"
+        $playwrightArguments = @('-c', $playwrightCode)
+        $enabled = & $PythonExe @playwrightArguments
         if ($LASTEXITCODE -ne 0) { throw 'Playwright設定の確認に失敗しました。' }
         if ("$enabled".Trim() -eq 'true') {
             & $PythonExe -m playwright install chromium

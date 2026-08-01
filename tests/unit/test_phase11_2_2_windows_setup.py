@@ -44,8 +44,12 @@ def test_powershell_is_51_safe_and_native_stderr_does_not_become_exception() -> 
     assert "PSNativeCommandUseErrorActionPreference = $false" in common
     assert "New-Object System.Text.UTF8Encoding" in common
     assert "[int]$code" in common and "exit ([int]$code)" in common
-    assert "struct.calcsize(\"P\")" in setup
-    assert "struct.calcsize(\\\"P\\\")" not in setup
+    assert '$bitsCode = "import struct; print(struct.calcsize(\'P\') * 8)"' in setup
+    assert "$bitsArguments = @('-c', $bitsCode)" in setup
+    assert "$bits = & $PythonExe @bitsArguments" in setup
+    assert "$playwrightArguments = @('-c', $playwrightCode)" in setup
+    assert "$enabled = & $PythonExe @playwrightArguments" in setup
+    assert "& $PythonExe -c" not in setup
 
 
 def test_all_powershell_files_use_utf8_bom_and_crlf() -> None:
